@@ -1,0 +1,31 @@
+{
+  "name": "andriy_city_test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "firebase": "^12.10.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-router-dom": "^7.13.1",
+    "recharts": "^3.8.0",
+    "three": "^0.183.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.2",
+    "@vitejs/plugin-react": "^6.0.1",
+    "tailwindcss": "^4.2.2",
+    "vite": "^8.0.0"
+  }
+}

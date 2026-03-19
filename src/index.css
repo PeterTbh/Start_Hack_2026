@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --color-city-bg: #1a2e1a;
+  --color-city-dark: #0f1f0f;
+  --color-city-panel: #1e293b;
+  --color-city-accent: #4ade80;
+  --color-city-gold: #fbbf24;
+  --color-city-blue: #60a5fa;
+  --color-city-red: #f87171;
+  --color-city-locked: #374151;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  background: #0f1a0f;
+  color: #e2e8f0;
+  overflow: hidden;
+}
+
+/* Isometric city styles */
+.iso-scene {
+  transform-style: preserve-3d;
+}
+
+.building-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-6px) rotate(-1deg); }
+  30% { transform: translateX(6px) rotate(1deg); }
+  45% { transform: translateX(-4px) rotate(-0.5deg); }
+  60% { transform: translateX(4px) rotate(0.5deg); }
+  75% { transform: translateX(-2px); }
+}
+
+.building-appear {
+  animation: buildingRise 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes buildingRise {
+  from { transform: scaleY(0); transform-origin: bottom; opacity: 0; }
+  to { transform: scaleY(1); transform-origin: bottom; opacity: 1; }
+}
+
+.pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { filter: drop-shadow(0 0 4px currentColor); }
+  50% { filter: drop-shadow(0 0 12px currentColor); }
+}
+
+/* Financial flow animation */
+@keyframes dashflow {
+  to { stroke-dashoffset: -18; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #1e293b; }
+::-webkit-scrollbar-thumb { background: #4ade80; border-radius: 3px; }
