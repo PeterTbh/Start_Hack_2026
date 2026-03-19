@@ -120,9 +120,11 @@ export default function CityMap({
   unlockedAreas, cash = 10000, portfolio = {}, currentYear = 2007,
   onAreaClick, onLibraryClick, onPortfolioClick, onMuseumClick,
   showLabels = true, assetManagerUnlocked = false, fireDrillBurning, fireDrillPhase,
+  placingMonument = null, placedMonuments = [], onMonumentPlaced,
 }) {
-  const [hovered, setHovered]         = useState(null)
+  const [hovered, setHovered]             = useState(null)
   const [selectedStock, setSelectedStock] = useState(null) // { instId, name }
+  const [showDistrictLabels, setShowDistrictLabels] = useState(false)
 
   const handleAreaClick      = useCallback((id) => onAreaClick(id),    [onAreaClick])
   const handleLibraryClick   = useCallback(() => onLibraryClick(),     [onLibraryClick])
@@ -159,10 +161,14 @@ export default function CityMap({
           hovered={hovered}
           setHovered={setHovered}
           showLabels={showLabels}
+          showDistrictLabels={showDistrictLabels}
           assetManagerUnlocked={assetManagerUnlocked}
           fireDrillBurning={fireDrillBurning}
           fireDrillPhase={fireDrillPhase}
           onStockSelect={handleStockSelect}
+          placingMonument={placingMonument}
+          placedMonuments={placedMonuments}
+          onMonumentPlaced={onMonumentPlaced}
         />
       </Canvas>
 
@@ -179,6 +185,25 @@ export default function CityMap({
           currentYear={currentYear}
           onClose={() => setSelectedStock(null)}
         />
+      )}
+
+      {/* District label toggle button */}
+      <button
+        onClick={() => setShowDistrictLabels(p => !p)}
+        className={`absolute top-3 left-3 z-20 px-3 py-1.5 rounded-lg text-sm font-bold border transition-all shadow ${
+          showDistrictLabels
+            ? 'bg-white text-slate-900 border-white'
+            : 'bg-black/40 text-white border-white/30 hover:bg-black/60'
+        }`}
+      >
+        🏷️ {showDistrictLabels ? 'Hide Labels' : 'Show Labels'}
+      </button>
+
+      {/* Placement mode banner */}
+      {placingMonument && (
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-20 bg-amber-600/95 text-white text-sm font-bold px-5 py-2 rounded-xl border border-amber-400 shadow-lg pointer-events-none">
+          {placingMonument === 'eiffelTower' ? '🗼 Eiffel Tower' : '🕰️ Big Ben'} — Click a golden ring to place
+        </div>
       )}
 
       {/* Controls hint */}

@@ -113,7 +113,17 @@ const TROPHIES = [
   },
 ]
 
-export default function MuseumModal({ onClose, userData, portfolio, currentYear }) {
+const MONUMENT_OPTIONS = [
+  { type: 'eiffelTower', icon: '🗼', label: 'Eiffel Tower' },
+  { type: 'bigBen',      icon: '🕰️', label: 'Big Ben'      },
+]
+
+const MONUMENT_SLOTS = [
+  { id: 1, threshold: 5  },
+  { id: 2, threshold: 10 },
+]
+
+export default function MuseumModal({ onClose, userData, portfolio, currentYear, onPlaceMonument, placedMonuments = [] }) {
   const cash = userData?.cash ?? userData?.capital ?? 10000
 
   const netWorth = useMemo(() => {
@@ -181,6 +191,55 @@ export default function MuseumModal({ onClose, userData, portfolio, currentYear 
               {t.earned && <div className="text-green-400 text-xs font-bold shrink-0">✓</div>}
             </div>
           ))}
+        </div>
+
+        {/* Monument placement */}
+        <div className="border-t border-amber-700/40 px-4 py-3">
+          <h3 className="text-amber-400 font-bold text-sm mb-2">🏗️ Place Monuments on your City</h3>
+          <div className="space-y-2">
+            {MONUMENT_SLOTS.map(slot => {
+              const slotUnlocked = earnedCount >= slot.threshold
+              const placed = placedMonuments[slot.id - 1]
+              return (
+                <div
+                  key={slot.id}
+                  className={`rounded-xl p-3 border ${
+                    slotUnlocked
+                      ? 'bg-slate-800/60 border-amber-600/40'
+                      : 'bg-slate-800/20 border-slate-700/30 opacity-50'
+                  }`}
+                >
+                  <div className="text-xs text-slate-400 mb-2">
+                    Slot {slot.id}
+                    {!slotUnlocked && ` · requires ${slot.threshold} trophies (${slot.threshold - earnedCount} more to go)`}
+                  </div>
+                  {placed ? (
+                    <div className="text-sm text-green-400 font-semibold">
+                      {MONUMENT_OPTIONS.find(m => m.type === placed.type)?.icon}{' '}
+                      {MONUMENT_OPTIONS.find(m => m.type === placed.type)?.label} placed ✓
+                    </div>
+                  ) : slotUnlocked ? (
+                    <div>
+                      <div className="text-xs text-slate-400 mb-1.5">Choose which monument to place:</div>
+                      <div className="flex gap-2">
+                        {MONUMENT_OPTIONS.map(m => (
+                          <button
+                            key={m.type}
+                            onClick={() => { onPlaceMonument?.(m.type, slot.id); onClose() }}
+                            className="flex-1 bg-amber-600/20 hover:bg-amber-600/40 border border-amber-500/50 text-white text-xs font-bold py-2 rounded-lg transition-colors"
+                          >
+                            {m.icon} {m.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-slate-500">🔒 Earn {slot.threshold} trophies to unlock this slot</div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
 
         <div className="border-t border-slate-700/60 px-5 py-2 text-xs text-slate-600">

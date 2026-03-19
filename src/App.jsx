@@ -65,6 +65,24 @@ function CityApp() {
   const portfolio     = userData?.portfolio || {}
   const allUnlocked   = unlockedAreas.length >= ASSET_ORDER.length
 
+  // ── Monument state ─────────────────────────────────────────────────────────
+  const [placingMonument, setPlacingMonument] = useState(null) // { type, slotId } | null
+  const [placedMonuments, setPlacedMonuments] = useState([null, null]) // [slot1, slot2]
+
+  const handlePlaceMonument = (type, slotId) => {
+    setPlacingMonument({ type, slotId })
+  }
+  const handleMonumentPlaced = (pos) => {
+    if (!placingMonument) return
+    const { type, slotId } = placingMonument
+    setPlacedMonuments(prev => {
+      const next = [...prev]
+      next[slotId - 1] = { type, pos }
+      return next
+    })
+    setPlacingMonument(null)
+  }
+
   // ── Fire drill state ───────────────────────────────────────────────────────
   const [fireDrill, setFireDrill] = useState(null) // null | { phase, burning, plan, tick, diversifiedCount, missingDistricts }
 
@@ -208,6 +226,9 @@ function CityApp() {
           assetManagerUnlocked={userData?.assetManagerUnlocked ?? false}
           fireDrillBurning={fireDrill?.burning}
           fireDrillPhase={fireDrill?.phase ?? null}
+          placingMonument={placingMonument?.type ?? null}
+          placedMonuments={placedMonuments}
+          onMonumentPlaced={handleMonumentPlaced}
         />
       </div>
 
@@ -264,6 +285,8 @@ function CityApp() {
           userData={userData}
           portfolio={portfolio}
           currentYear={currentYear}
+          onPlaceMonument={handlePlaceMonument}
+          placedMonuments={placedMonuments}
         />
       )}
       {modal === 'assetManager' && (

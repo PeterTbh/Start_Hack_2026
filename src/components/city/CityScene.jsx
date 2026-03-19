@@ -784,7 +784,7 @@ const DISTRICT_FF_OFFSETS = [
 ]
 
 // ── Neighbourhood ─────────────────────────────────────────────────────────────
-function Neighbourhood({ id, portfolio, currentYear, unlockedAreas, onClick, onHover, isHovered, showLabels, diversification, fireDrillBurning, fireDrillPhase, onStockSelect }) {
+function Neighbourhood({ id, portfolio, currentYear, unlockedAreas, onClick, onHover, isHovered, showLabels, showDistrictLabels, diversification, fireDrillBurning, fireDrillPhase, onStockSelect }) {
   const cfg      = DISTRICT_CFG[id]
   const unlocked = unlockedAreas.includes(id)
   const position = DISTRICT_POSITIONS[id]
@@ -932,7 +932,7 @@ function Neighbourhood({ id, portfolio, currentYear, unlockedAreas, onClick, onH
         )
       })}
 
-      {/* Label */}
+      {/* Small label (always shown when showLabels) */}
       {showLabels && (
         <Html position={[0, exchangeH + 2.8, 0]} center distanceFactor={18} occlude={false}>
           <div style={{
@@ -946,6 +946,29 @@ function Neighbourhood({ id, portfolio, currentYear, unlockedAreas, onClick, onH
             {cfg.icon} {cfg.label}
             {!unlocked && ' 🔒'}
             {holdings.length > 0 && ` · ${holdings.length} holding${holdings.length > 1 ? 's' : ''}`}
+          </div>
+        </Html>
+      )}
+
+      {/* Large district label toggle */}
+      {showDistrictLabels && (
+        <Html position={[0, 17, 0]} center distanceFactor={14} occlude={false}>
+          <div style={{
+            background: unlocked ? `${cfg.color}F2` : '#374151F2',
+            color: 'white',
+            padding: '12px 28px',
+            borderRadius: 14,
+            fontWeight: 800,
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+            border: `2px solid ${unlocked ? cfg.color : '#6B7280'}`,
+            boxShadow: `0 6px 28px rgba(0,0,0,0.55), 0 0 18px ${cfg.color}44`,
+            textAlign: 'center',
+            minWidth: 180,
+          }}>
+            <div style={{ fontSize: 26, lineHeight: 1.2 }}>{cfg.icon} {cfg.label}</div>
+            <div style={{ fontSize: 13, fontWeight: 500, opacity: 0.85, marginTop: 5 }}>{cfg.description}</div>
+            {!unlocked && <div style={{ fontSize: 11, color: '#FBBF24', marginTop: 4 }}>🔒 Locked</div>}
           </div>
         </Html>
       )}
@@ -1343,6 +1366,149 @@ function EiffelTower({ unlocked }) {
   )
 }
 
+// ── Big Ben ───────────────────────────────────────────────────────────────────
+function BigBen({ position = [0, 0, 0] }) {
+  const stone  = '#C8B896'
+  const dark   = '#8B7355'
+  const clockBg = '#1E3A2F'
+  const gold   = '#C9A84C'
+  const mat    = (color, shine = 10) => <meshPhongMaterial color={color} shininess={shine} />
+
+  return (
+    <group position={position}>
+      {/* Ground circle */}
+      <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[4.0, 20]} />
+        <meshLambertMaterial color="#C8B880" transparent opacity={0.35} />
+      </mesh>
+
+      {/* Stone base podium */}
+      <mesh position={[0, 0.35, 0]} castShadow receiveShadow>
+        <boxGeometry args={[4.0, 0.70, 4.0]} />
+        {mat(dark, 8)}
+      </mesh>
+
+      {/* Lower tower */}
+      <mesh position={[0, 4.25, 0]} castShadow receiveShadow>
+        <boxGeometry args={[2.9, 7.8, 2.9]} />
+        {mat(stone)}
+      </mesh>
+
+      {/* Floor bands on lower tower */}
+      {[2.5, 5.0, 7.0].map((y, i) => (
+        <mesh key={i} position={[0, y, 0]} castShadow>
+          <boxGeometry args={[3.1, 0.18, 3.1]} />
+          {mat(dark, 5)}
+        </mesh>
+      ))}
+
+      {/* Clock section (slightly wider) */}
+      <mesh position={[0, 9.7, 0]} castShadow>
+        <boxGeometry args={[3.4, 2.6, 3.4]} />
+        {mat(stone)}
+      </mesh>
+
+      {/* Clock faces — 4 sides */}
+      {[[0, 9.7, 1.72], [0, 9.7, -1.72], [1.72, 9.7, 0], [-1.72, 9.7, 0]].map(([cx, cy, cz], i) => (
+        <group key={i} position={[cx, cy, cz]}>
+          <mesh rotation={[Math.PI / 2, i < 2 ? 0 : Math.PI / 2, 0]}>
+            <cylinderGeometry args={[0.95, 0.95, 0.10, 16]} />
+            <meshPhongMaterial color={clockBg} shininess={20} />
+          </mesh>
+          {/* Gold clock ring */}
+          <mesh rotation={[Math.PI / 2, i < 2 ? 0 : Math.PI / 2, 0]}>
+            <torusGeometry args={[0.95, 0.09, 6, 20]} />
+            <meshPhongMaterial color={gold} shininess={60} />
+          </mesh>
+        </group>
+      ))}
+
+      {/* Belfry section */}
+      <mesh position={[0, 11.4, 0]} castShadow>
+        <boxGeometry args={[2.6, 1.5, 2.6]} />
+        {mat(stone)}
+      </mesh>
+
+      {/* Belfry corner columns */}
+      {[[-1.1, 11.4, -1.1], [1.1, 11.4, -1.1], [-1.1, 11.4, 1.1], [1.1, 11.4, 1.1]].map(([x, y, z], i) => (
+        <mesh key={i} position={[x, y, z]} castShadow>
+          <cylinderGeometry args={[0.18, 0.20, 1.5, 6]} />
+          {mat(dark)}
+        </mesh>
+      ))}
+
+      {/* Spire base octagon */}
+      <mesh position={[0, 12.5, 0]} castShadow>
+        <cylinderGeometry args={[1.1, 1.5, 0.8, 8]} />
+        {mat(stone)}
+      </mesh>
+
+      {/* Spire */}
+      <mesh position={[0, 14.7, 0]} castShadow>
+        <coneGeometry args={[1.1, 4.0, 8]} />
+        {mat(stone, 15)}
+      </mesh>
+
+      {/* Antenna tip */}
+      <mesh position={[0, 17.0, 0]} castShadow>
+        <cylinderGeometry args={[0.05, 0.05, 1.2, 6]} />
+        {mat(gold, 80)}
+      </mesh>
+    </group>
+  )
+}
+
+// ── Monument placement spot (animated golden ring) ────────────────────────────
+function PlacementSpot({ position, onPlace }) {
+  const ringRef = useRef()
+  const glowRef = useRef()
+
+  useFrame(({ clock }) => {
+    const t = clock.getElapsedTime()
+    if (ringRef.current)  ringRef.current.position.y = Math.sin(t * 2.2) * 0.22 + 0.4
+    if (glowRef.current)  glowRef.current.rotation.y = t * 0.8
+  })
+
+  return (
+    <group position={position}>
+      <group ref={ringRef}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]}
+          onClick={(e) => { e.stopPropagation(); onPlace(position) }}
+          onPointerOver={(e) => { e.stopPropagation(); document.body.style.cursor = 'pointer' }}
+          onPointerOut={(e)  => { e.stopPropagation(); document.body.style.cursor = 'default' }}
+        >
+          <torusGeometry args={[2.6, 0.35, 8, 28]} />
+          <meshPhongMaterial color="#FFD700" emissive="#FFD700" emissiveIntensity={0.55} transparent opacity={0.88} />
+        </mesh>
+      </group>
+      <mesh ref={glowRef} position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[2.2, 20]} />
+        <meshPhongMaterial color="#FFD700" transparent opacity={0.13} />
+      </mesh>
+      <pointLight position={[0, 1.2, 0]} color="#FFD700" intensity={1.0} distance={9} />
+      <Html position={[0, 4.5, 0]} center distanceFactor={16}>
+        <div style={{
+          background: '#0f172aEE', color: '#FFD700', padding: '5px 14px',
+          borderRadius: 8, fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap',
+          pointerEvents: 'none', border: '1px solid #FFD70066',
+        }}>
+          Click to place here
+        </div>
+      </Html>
+    </group>
+  )
+}
+
+// Monument spot positions (edges of platform, away from all buildings)
+const MONUMENT_SPOTS = [
+  { id: 0, pos: [-38, 0, -43] },
+  { id: 1, pos: [  0, 0, -43] },
+  { id: 2, pos: [ 38, 0, -43] },
+  { id: 3, pos: [-38, 0,  43] },
+  { id: 4, pos: [  0, 0,  43] },
+  { id: 5, pos: [ 38, 0,  43] },
+]
+
 // ── Museum ────────────────────────────────────────────────────────────────────
 function MuseumBuilding({ onClick, onHover, isHovered, showLabels }) {
   const stone  = '#E8DCC8'
@@ -1543,8 +1709,9 @@ const TREE_POS = [
 export default function CityScene({
   unlockedAreas, cash, portfolio = {}, currentYear = 2007,
   onAreaClick, onLibraryClick, onPortfolioClick, onMuseumClick,
-  hovered, setHovered, showLabels = true,
+  hovered, setHovered, showLabels = true, showDistrictLabels = false,
   assetManagerUnlocked = false, fireDrillBurning, fireDrillPhase, onStockSelect,
+  placingMonument = null, placedMonuments = [], onMonumentPlaced,
 }) {
   const PH = PLATFORM_HALF
 
@@ -1600,6 +1767,7 @@ export default function CityScene({
           onHover={setHovered}
           isHovered={hovered === id}
           showLabels={showLabels}
+          showDistrictLabels={showDistrictLabels}
           diversification={diversification}
           fireDrillBurning={fireDrillBurning}
           fireDrillPhase={fireDrillPhase}
@@ -1633,6 +1801,39 @@ export default function CityScene({
 
       {/* Asset Manager Zone (Eiffel Tower — unlocks at 5-day streak) */}
       <AssetManagerZone unlocked={assetManagerUnlocked} showLabels={showLabels} onClick={onLibraryClick} />
+
+      {/* Placed monuments */}
+      {placedMonuments.map((m, i) => {
+        if (!m) return null
+        const [mx, , mz] = m.pos
+        return (
+          <group key={i} position={[mx, 0, mz]}>
+            {m.type === 'eiffelTower' && <EiffelTower unlocked />}
+            {m.type === 'bigBen' && <BigBen />}
+            {showLabels && (
+              <Html position={[0, 14, 0]} center distanceFactor={22}>
+                <div style={{
+                  background: '#0f172aEE', color: '#FFD700',
+                  padding: '3px 10px', borderRadius: 7, fontSize: 12,
+                  fontWeight: 700, whiteSpace: 'nowrap', pointerEvents: 'none',
+                  border: '1px solid #FFD70066',
+                }}>
+                  {m.type === 'eiffelTower' ? '🗼 Eiffel Tower' : '🕰️ Big Ben'}
+                </div>
+              </Html>
+            )}
+          </group>
+        )
+      })}
+
+      {/* Monument placement spots */}
+      {placingMonument && MONUMENT_SPOTS.filter(s => !placedMonuments.some(m => m && JSON.stringify(m.pos) === JSON.stringify(s.pos))).map(spot => (
+        <PlacementSpot
+          key={spot.id}
+          position={spot.pos}
+          onPlace={(pos) => onMonumentPlaced?.(pos)}
+        />
+      ))}
     </>
   )
 }
