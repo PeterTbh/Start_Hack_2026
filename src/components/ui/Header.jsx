@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { logoutUser } from '../../firebase/auth'
 import { useAuth } from '../../hooks/useAuth.jsx'
 import { ASSET_ORDER } from '../../data/assetData'
@@ -15,7 +15,7 @@ export default function Header({ onOpenLeaderboard, onOpenLibrary, currentYear, 
     localStorage.setItem('pf-theme', light ? 'light' : 'dark')
   }, [light])
   const { user, userData } = useAuth()
-  const cash          = userData?.cash ?? userData?.capital ?? 10000
+  const cash          = userData?.cash ?? userData?.capital ?? 500000
   const totalYears    = GAME_END_YEAR - GAME_START_YEAR
 
   const portfolio = userData?.portfolio || {}
@@ -111,17 +111,7 @@ export default function Header({ onOpenLeaderboard, onOpenLibrary, currentYear, 
 
           <div style={{ width: 1, height: 20, background: '#ffffff14', margin: '0 4px' }} />
 
-          <NavBtn onClick={onRestart} title="Reset year to 2007">Restart</NavBtn>
-          <NavBtn onClick={onNewGame} title="Wipe all progress and start fresh" danger>New Game</NavBtn>
-          <button
-            onClick={logoutUser}
-            className="px-2 py-1 text-[11px] transition-all rounded"
-            style={{ color: '#ffffff33' }}
-            onMouseEnter={e => e.target.style.color = '#ffffffAA'}
-            onMouseLeave={e => e.target.style.color = '#ffffff33'}
-          >
-            Sign out
-          </button>
+          <AccountMenu onRestart={onRestart} onNewGame={onNewGame} />
         </div>
       </div>
 
@@ -137,6 +127,60 @@ function StatPill({ label, value, valueStyle }) {
       <div className="text-[9px] uppercase tracking-widest font-semibold mb-0.5" style={{ color: '#ffffff44' }}>{label}</div>
       <div className="text-xs leading-tight" style={valueStyle}>{value}</div>
     </div>
+  )
+}
+
+function AccountMenu({ onRestart, onNewGame }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="flex items-center gap-1 px-2.5 py-1 rounded text-[11px] font-semibold transition-all"
+        style={{ background: open ? '#ffffff18' : '#ffffff0a', color: '#ffffffBB', border: '1px solid #ffffff18' }}
+      >
+        Account ▾
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 rounded-xl overflow-hidden shadow-2xl"
+          style={{ top: 'calc(100% + 6px)', minWidth: 160, background: '#0d1117', border: '1px solid #ffffff14', zIndex: 100 }}
+        >
+          <DropItem onClick={() => { onRestart(); setOpen(false) }} label="Restart" sub="Reset to 2007" />
+          <div style={{ height: 1, background: '#ffffff0a', margin: '0 12px' }} />
+          <DropItem onClick={() => { onNewGame(); setOpen(false) }} label="New Game" sub="Wipe all progress" danger />
+          <div style={{ height: 1, background: '#ffffff0a', margin: '0 12px' }} />
+          <DropItem onClick={() => { logoutUser(); setOpen(false) }} label="Sign out" sub="Log out of account" />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DropItem({ onClick, label, sub, danger }) {
+  const [hov, setHov] = useState(false)
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      className="w-full text-left px-4 py-2.5 transition-all"
+      style={{ background: hov ? (danger ? '#ff000018' : '#ffffff0a') : 'transparent' }}
+    >
+      <div className="text-xs font-semibold" style={{ color: hov && danger ? '#f87171' : hov ? '#ffffff' : danger ? '#ffffff66' : '#ffffffBB' }}>{label}</div>
+      <div className="text-[10px] mt-0.5" style={{ color: '#ffffff33' }}>{sub}</div>
+    </button>
   )
 }
 

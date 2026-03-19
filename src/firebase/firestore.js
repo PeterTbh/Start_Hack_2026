@@ -7,7 +7,7 @@ async function getUserDoc(uid) {
   const snap = await getDoc(doc(db, 'users', uid))
   const data = snap.data() || {}
   // Migration: old users have `capital` but not `cash` — treat capital as cash
-  if (data.cash === undefined) data.cash = data.capital ?? 10000
+  if (data.cash === undefined) data.cash = data.capital ?? 500000
   if (data.portfolio === undefined) data.portfolio = {}
   if (data.currentYear === undefined) data.currentYear = 2007
   return data
@@ -35,7 +35,7 @@ export async function markQuizComplete(uid, quizId, correctCount) {
   const data  = await getUserDoc(uid)
   await updateDoc(doc(db, 'users', uid), {
     completedQuizzes: arrayUnion(quizId),
-    cash: (data.cash ?? 10000) + bonus,
+    cash: (data.cash ?? 500000) + bonus,
   })
 }
 
@@ -134,7 +134,7 @@ export async function checkDailyStreak(uid) {
   const updates = {
     streak,
     lastLoginDate: today,
-    cash: (data.cash ?? 10000) + bonus,
+    cash: (data.cash ?? 500000) + bonus,
     xp:   (data.xp   ?? 0)    + xp,
   }
   if (streak >= 5) updates.assetManagerUnlocked = true
@@ -153,7 +153,7 @@ export async function getLeaderboard() {
 // ── Full game reset ───────────────────────────────────────────────────────────
 export async function resetUserProgress(uid) {
   await updateDoc(doc(db, 'users', uid), {
-    cash:        10000,
+    cash:        500000,
     portfolio:   {},
     currentYear: 2007,
     totalScore:  0,

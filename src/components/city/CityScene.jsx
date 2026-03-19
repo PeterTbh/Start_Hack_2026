@@ -1,8 +1,9 @@
 import { useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
+import * as THREE from 'three'
 import { ASSET_ORDER } from '../../data/assetData'
-import { DISTRICT_INSTRUMENTS, INSTRUMENTS, GAME_START_YEAR } from '../../data/stockData'
+import { DISTRICT_INSTRUMENTS, INSTRUMENTS, GAME_START_YEAR, GAME_END_YEAR } from '../../data/stockData'
 import { getPrice } from '../../firebase/firestore'
 
 // ── District config ───────────────────────────────────────────────────────────
@@ -820,7 +821,7 @@ const DISTRICT_FF_OFFSETS = [
 ]
 
 // ── Neighbourhood ─────────────────────────────────────────────────────────────
-function Neighbourhood({ id, portfolio, currentYear, unlockedAreas, onClick, onHover, isHovered, showLabels, showDistrictLabels, diversification, fireDrillBurning, fireDrillPhase, onStockSelect }) {
+function Neighbourhood({ id, portfolio, currentYear, unlockedAreas, onClick, onHover, isHovered, showLabels, showDistrictLabels, diversification, fireDrillBurning, fireDrillPhase, onStockSelect, isFinished }) {
   const cfg      = DISTRICT_CFG[id]
   const unlocked = unlockedAreas.includes(id)
   const position = DISTRICT_POSITIONS[id]
@@ -835,7 +836,7 @@ function Neighbourhood({ id, portfolio, currentYear, unlockedAreas, onClick, onH
       const prevPrice = getPrice(instId, currentYear - 1)
       const value = h.shares * price
       const prevValue = h.shares * prevPrice
-      const isCrisis = prevValue > 0 && value < prevValue * 0.85
+      const isCrisis = !isFinished && prevValue > 0 && value < prevValue * 0.85
       const returnPct = h.avgPurchasePrice > 0 ? (price / h.avgPurchasePrice - 1) * 100 : 0
       const isETF  = ETF_INSTRUMENTS.has(instId)
       const isHouse = !isETF && value < 750
@@ -1013,77 +1014,180 @@ function Neighbourhood({ id, portfolio, currentYear, unlockedAreas, onClick, onH
 // ── City road grid ────────────────────────────────────────────────────────────
 // ── Organic paths — hand-crafted winding routes between districts ─────────────
 // Each path is an array of [x, z] waypoints; segments rendered between pairs.
-const ORGANIC_PATHS = [
-  // top row
-  [[-34,-30],[0,-30]],
-  [[0,-30],[34,-30]],
-  // left & right columns
-  [[-34,-30],[-34,6]],
-  [[34,-30],[34,6]],
-  // centre spine
-  [[0,-30],[0,-1]],
-  [[0,-1],[0,30]],
-  // diagonals to harbour
-  [[-34,6],[0,30]],
-  [[34,6],[0,30]],
-  // smiStocks ↔ museum
-  [[-34,6],[-22,22]],
-  // assetManager ↔ singleStocks
-  [[22,22],[34,6]],
-  // HQ ↔ academy
-  [[0,-1],[12,-2]],
-  // museum ↔ assetManager
-  [[-22,22],[22,22]],
-]
+// ── Rounded island platform ───────────────────────────────────────────────────
+function makeRoundedRect(hw, hd, r, steps = 12) {
+  const shape = new THREE.Shape()
+  shape.moveTo(-hw + r, -hd)
+  shape.lineTo( hw - r, -hd)
+  shape.quadraticCurveTo( hw, -hd,  hw, -hd + r)
+  shape.lineTo( hw,  hd - r)
+  shape.quadraticCurveTo( hw,  hd,  hw - r,  hd)
+  shape.lineTo(-hw + r,  hd)
+  shape.quadraticCurveTo(-hw,  hd, -hw,  hd - r)
+  shape.lineTo(-hw, -hd + r)
+  shape.quadraticCurveTo(-hw, -hd, -hw + r, -hd)
+  return shape
+}
 
-function OrganicPaths() {
-  const y       = 0.018
-  const rw      = 1.6
-  const dashLen = 1.0   // white dash length
-  const gapLen  = 1.0   // gap between dashes
-  const period  = dashLen + gapLen
+function RoundedPlatform() {
+  const greenGeo = useMemo(() => {
+    const shape = makeRoundedRect(46, 46, 14)
+    return new THREE.ExtrudeGeometry(shape, { depth: 0.55, bevelEnabled: false })
+  }, [])
+
+  const darkGeo = useMemo(() => {
+    const shape = makeRoundedRect(47.5, 47.5, 15)
+    return new THREE.ExtrudeGeometry(shape, { depth: 0.18, bevelEnabled: false })
+  }, [])
 
   return (
     <group>
-      {ORGANIC_PATHS.map((path, pi) =>
-        path.slice(1).map((end, si) => {
-          const [x1, z1] = path[si]
-          const [x2, z2] = end
-          const mx  = (x1 + x2) / 2
-          const mz  = (z1 + z2) / 2
-          const dx  = x2 - x1
-          const dz  = z2 - z1
-          const len = Math.sqrt(dx * dx + dz * dz)
-          const ang = Math.atan2(dx, dz)
+      {/* Green surface — shifted down so top face lands at world y=0 */}
+      <mesh geometry={greenGeo} position={[0, -0.55, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <meshLambertMaterial color="#4E7E3E" />
+      </mesh>
+      {/* Dark base edge — sits just below the green layer */}
+      <mesh geometry={darkGeo} position={[0, -0.73, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <meshLambertMaterial color="#2C4A1E" />
+      </mesh>
+    </group>
+  )
+}
 
-          // Build white dash positions along the road centre
-          const dashes = []
-          const count  = Math.floor(len / period)
-          const offset = -(count * period) / 2 + dashLen / 2
-          for (let d = 0; d < count; d++) {
-            dashes.push(offset + d * period)
-          }
+// ── Mountain range ────────────────────────────────────────────────────────────
+// Two layers: a taller back row and a shorter front row to create depth
+const MOUNTAINS = [
+  // back layer — taller, further away
+  { x: -100, z: -88, h: 38, r: 30, s: 0.40 },
+  { x:  -72, z: -92, h: 52, r: 36, s: 0.44 },
+  { x:  -44, z: -88, h: 40, r: 28, s: 0.38 },
+  { x:  -16, z: -94, h: 60, r: 40, s: 0.46 },
+  { x:    8, z: -92, h: 64, r: 42, s: 0.48 },
+  { x:   34, z: -90, h: 54, r: 38, s: 0.44 },
+  { x:   60, z: -88, h: 42, r: 30, s: 0.40 },
+  { x:   84, z: -92, h: 48, r: 34, s: 0.42 },
+  { x:  106, z: -87, h: 34, r: 26, s: 0.36 },
+  // front layer — shorter, slightly closer, fills gaps
+  { x:  -86, z: -76, h: 24, r: 20, s: 0.30 },
+  { x:  -60, z: -74, h: 30, r: 22, s: 0.32 },
+  { x:  -32, z: -78, h: 22, r: 18, s: 0.28 },
+  { x:   -6, z: -76, h: 28, r: 20, s: 0.30 },
+  { x:   20, z: -74, h: 26, r: 19, s: 0.29 },
+  { x:   48, z: -78, h: 24, r: 18, s: 0.28 },
+  { x:   72, z: -75, h: 30, r: 22, s: 0.31 },
+  { x:   96, z: -77, h: 22, r: 18, s: 0.27 },
+]
 
-          return (
-            <group key={`${pi}-${si}`}>
-              {/* Road surface */}
-              <mesh position={[mx, y, mz]} rotation={[0, ang, 0]}>
-                <boxGeometry args={[rw, 0.03, len + 0.1]} />
-                <meshLambertMaterial color="#1a1a1a" />
-              </mesh>
-              {/* White dashed centre line — placed in a rotated group so Z = along road */}
-              <group position={[mx, y + 0.01, mz]} rotation={[0, ang, 0]}>
-                {dashes.map((off, di) => (
-                  <mesh key={di} position={[0, 0, off]}>
-                    <boxGeometry args={[0.1, 0.008, dashLen]} />
-                    <meshBasicMaterial color="#ffffff" />
-                  </mesh>
-                ))}
-              </group>
-            </group>
-          )
-        })
-      )}
+function MountainRange() {
+  return (
+    <group>
+      {MOUNTAINS.map(({ x, z, h, r, s }, i) => {
+        const snowH = h * s
+        const snowR = r * s * 0.85
+        return (
+          <group key={i}>
+            {/* Rock body */}
+            <mesh position={[x, h / 2 - 1, z]}>
+              <coneGeometry args={[r, h, 8]} />
+              <meshLambertMaterial color="#5a6b7a" />
+            </mesh>
+            {/* Mid-rock lighter face */}
+            <mesh position={[x, h * 0.55, z - 0.5]}>
+              <coneGeometry args={[r * 0.7, h * 0.7, 8]} />
+              <meshLambertMaterial color="#6e7f90" />
+            </mesh>
+            {/* Snow cap */}
+            <mesh position={[x, h - snowH / 2 - 1, z]}>
+              <coneGeometry args={[snowR, snowH, 8]} />
+              <meshLambertMaterial color="#ddeaf5" />
+            </mesh>
+          </group>
+        )
+      })}
+    </group>
+  )
+}
+
+// All roads are axis-aligned [x1,z1] → [x2,z2].
+// Grouped by tier so more roads appear as more districts unlock.
+const ROADS_MAIN = [
+  // 3 main horizontal roads at district rows
+  [[-46,-30],[46,-30]],  // top row  (bonds / equityIndices / gold)
+  [[-46,  6],[46,  6]],  // mid row  (smiStocks / singleStocks)
+  [[-46, 30],[46, 30]],  // harbour  (fx)
+  // 3 main vertical roads at district columns
+  [[-34,-40],[-34, 12]], // left column
+  [[  0,-40],[  0, 36]], // centre spine
+  [[ 34,-40],[ 34, 12]], // right column
+]
+
+const ROADS_SECONDARY = [
+  // horizontal cross-streets between the main rows
+  [[-34,-18],[34,-18]],  // between top and mid rows
+  [[-34, 18],[34, 18]],  // between mid and harbour rows
+  // verticals between the three main columns
+  [[-17,-30],[-17,  6]], // left of centre
+  [[ 17,-30],[ 17,  6]], // right of centre
+]
+
+const ROADS_TERTIARY = [
+  // short HQ / library connector
+  [[ -8, -2],[ 17, -2]],
+  // lower-left and lower-right arms (museum / assetManager)
+  [[-22,  6],[-22, 30]],
+  [[ 22,  6],[ 22, 30]],
+  // lower cross-street
+  [[-34, 22],[ 34, 22]],
+]
+
+function RoadSegment({ x1, z1, x2, z2, y, rw, dashLen, gapLen }) {
+  const period = dashLen + gapLen
+  const mx  = (x1 + x2) / 2
+  const mz  = (z1 + z2) / 2
+  const dx  = x2 - x1
+  const dz  = z2 - z1
+  const len = Math.sqrt(dx * dx + dz * dz)
+  const ang = Math.atan2(dx, dz)
+
+  const count  = Math.floor(len / period)
+  const offset = -(count * period) / 2 + dashLen / 2
+  const dashes = Array.from({ length: count }, (_, d) => offset + d * period)
+
+  return (
+    <group>
+      <mesh position={[mx, y, mz]} rotation={[0, ang, 0]}>
+        <boxGeometry args={[rw, 0.03, len + 0.1]} />
+        <meshLambertMaterial color="#1a1a1a" />
+      </mesh>
+      <group position={[mx, y + 0.01, mz]} rotation={[0, ang, 0]}>
+        {dashes.map((off, di) => (
+          <mesh key={di} position={[0, 0, off]}>
+            <boxGeometry args={[0.1, 0.008, dashLen]} />
+            <meshBasicMaterial color="#ffffff" />
+          </mesh>
+        ))}
+      </group>
+    </group>
+  )
+}
+
+function OrganicPaths({ unlockedCount = 0 }) {
+  const y       = 0.018
+  const rw      = 1.7
+  const dashLen = 1.1
+  const gapLen  = 1.0
+
+  const roads = [
+    ...ROADS_MAIN,
+    ...(unlockedCount >= 2 ? ROADS_SECONDARY : []),
+    ...(unlockedCount >= 4 ? ROADS_TERTIARY  : []),
+  ]
+
+  return (
+    <group>
+      {roads.map(([[x1, z1], [x2, z2]], i) => (
+        <RoadSegment key={i} x1={x1} z1={z1} x2={x2} z2={z2} y={y} rw={rw} dashLen={dashLen} gapLen={gapLen} />
+      ))}
     </group>
   )
 }
@@ -1827,6 +1931,8 @@ export default function CityScene({
   return (
     <>
       <color attach="background" args={['#87CEEB']} />
+      {/* Mountains behind city */}
+      <MountainRange />
 
       {/* Lighting */}
       <ambientLight intensity={0.70} />
@@ -1838,21 +1944,14 @@ export default function CityScene({
       />
       <hemisphereLight args={['#87CEEB', '#4E7E3E', 0.36]} />
 
-      {/* Platform */}
-      <mesh position={[0, -0.20, 0]} receiveShadow>
-        <boxGeometry args={[PH * 2, 0.40, PH * 2]} />
-        <meshLambertMaterial color="#4E7E3E" />
-      </mesh>
-      <mesh position={[0, -0.48, 0]}>
-        <boxGeometry args={[PH * 2 + 0.4, 0.16, PH * 2 + 0.4]} />
-        <meshLambertMaterial color="#2C4A1E" />
-      </mesh>
+      {/* Platform — rounded corners, no cliff edges */}
+      <RoundedPlatform />
 
       {/* Harbour + water */}
       <Harbour />
 
       {/* Organic winding paths between districts */}
-      <OrganicPaths />
+      <OrganicPaths unlockedCount={unlockedAreas.length} />
 
       {/* Trees */}
       {TREE_POS.map((pos, i) => (
@@ -1876,6 +1975,7 @@ export default function CityScene({
           fireDrillBurning={fireDrillBurning}
           fireDrillPhase={fireDrillPhase}
           onStockSelect={onStockSelect}
+          isFinished={currentYear >= GAME_END_YEAR}
         />
       ))}
 
