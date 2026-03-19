@@ -26,14 +26,6 @@ export default function StreakModal({ streakData, onClose }) {
             : `${7 - streak} more day${7 - streak !== 1 ? 's' : ''} to reach max rewards.`}
         </p>
 
-        {/* Special unlock banner at day 5 */}
-        {newlyUnlockedAssetManager && (
-          <div className="bg-amber-900/50 border border-amber-500/60 rounded-xl px-4 py-3 mb-5 text-left">
-            <div className="text-amber-400 font-bold text-sm mb-1">🗼 Asset Manager Unlocked!</div>
-            <div className="text-slate-300 text-xs">The Eiffel Tower district is now open on your city map. You've been promoted to Asset Manager!</div>
-          </div>
-        )}
-
         {/* Flame bar */}
         <div className="flex justify-center gap-1 mb-6">
           {Array.from({ length: 7 }, (_, i) => (
